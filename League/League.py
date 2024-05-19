@@ -18,18 +18,18 @@ def get_api_key():
         raise ValueError("API key not found. Please set the RIOT_API_KEY environment variable.")
     return api_key
 
+# Function to get PUUID
 def get_puuid(game_name, name_tag):
     api_key = get_api_key()
     url_puuid = f'https://europe.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{name_tag}?api_key={api_key}'
-    print(f"URL for PUUID: {url_puuid}")  # Debugging print statement
     response_puuid = requests.get(url_puuid)
     response_puuid.raise_for_status()
     return response_puuid.json()['puuid']
 
+# Function to get summoner info by PUUID
 def get_summoner_info_by_puuid(puuid):
     api_key = get_api_key()
     url_summoner = f'https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}?api_key={api_key}'
-    print(f"URL for summoner info: {url_summoner}")  # Debugging print statement
     response_summoner = requests.get(url_summoner)
     response_summoner.raise_for_status()
     summoner_info = response_summoner.json()
@@ -40,7 +40,6 @@ def get_summoner_info_by_puuid(puuid):
 
     # Get rank information
     url_rank = f'https://euw1.api.riotgames.com/lol/league/v4/entries/by-summoner/{summoner_id}?api_key={api_key}'
-    print(f"URL for rank info: {url_rank}")  # Debugging print statement
     response_rank = requests.get(url_rank)
     response_rank.raise_for_status()
     rank_info = response_rank.json()
@@ -60,22 +59,23 @@ def get_summoner_info_by_puuid(puuid):
         'rank_flex': rank_flex
     }
 
-def get_matchids(puuid, amount_of_games=10):
+# Function to get match IDs
+def get_matchids(puuid, amount_of_games=20):  # Show latest 20 games
     api_key = get_api_key()
     url_matches = f'https://europe.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count={amount_of_games}&api_key={api_key}'
-    print(f"URL for match IDs: {url_matches}")  # Debugging print statement
     response_matches = requests.get(url_matches)
     response_matches.raise_for_status()
     return response_matches.json()
 
+# Function to get match data
 def get_match_data(match_id):
     api_key = get_api_key()
     url_match = f'https://europe.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
-    print(f"URL for match data: {url_match}")  # Debugging print statement
     response_match = requests.get(url_match)
     response_match.raise_for_status()
     return response_match.json()
 
+# Fetch champion data from Data Dragon
 def fetch_champion_data():
     url = "https://ddragon.leagueoflegends.com/cdn/12.14.1/data/en_US/champion.json"
     response = requests.get(url)
@@ -84,15 +84,35 @@ def fetch_champion_data():
     champions = data['data']
     return {champ: f"http://ddragon.leagueoflegends.com/cdn/12.14.1/img/champion/{champions[champ]['image']['full']}" for champ in champions}
 
+# Fetch item data from Data Dragon
+def fetch_item_data():
+    url = "https://ddragon.leagueoflegends.com/cdn/12.14.1/data/en_US/item.json"
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+    items = data['data']
+    return {item: f"http://ddragon.leagueoflegends.com/cdn/12.14.1/img/item/{items[item]['image']['full']}" for item in items}
+
+# Fetch the champion and item data once and store it in dictionaries
 CHAMPION_DATA = fetch_champion_data()
+ITEM_DATA = fetch_item_data()
+
+# Cache for storing fetched images
+IMAGE_CACHE = {}
 
 def fetch_image(url):
+    if url in IMAGE_CACHE:
+        return IMAGE_CACHE[url]
     response = requests.get(url)
     response.raise_for_status()
     image_data = response.content
     image = Image.open(io.BytesIO(image_data))
-    return ImageTk.PhotoImage(image)
+    image = image.resize((32, 32), Image.Resampling.LANCZOS)
+    photo_image = ImageTk.PhotoImage(image)
+    IMAGE_CACHE[url] = photo_image
+    return photo_image
 
+# Function to filter match data
 def filter_data(data, my_puuid):
     filtered_data = []
     for match in data:
@@ -122,6 +142,7 @@ def filter_data(data, my_puuid):
 
     return filtered_data
 
+# Main Application Class
 class LeagueStatsApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -164,18 +185,22 @@ class LeagueStatsApp(tk.Tk):
         self.frame_middle.grid(row=0, column=1, sticky="ns")
         self.frame_middle.grid_propagate(False)
 
-        self.tree_matches = ttk.Treeview(self.frame_middle, columns=("Champion", "K/D/A", "CS", "Items", "Teams"), show='headings')
-        self.tree_matches.heading("Champion", text="Champion")
-        self.tree_matches.heading("K/D/A", text="K/D/A")
-        self.tree_matches.heading("CS", text="CS")
-        self.tree_matches.heading("Items", text="Items")
-        self.tree_matches.heading("Teams", text="Teams")
-        self.tree_matches.column("Champion", width=50)
-        self.tree_matches.column("K/D/A", width=50)
-        self.tree_matches.column("CS", width=50)
-        self.tree_matches.column("Items", width=200)
-        self.tree_matches.column("Teams", width=300)
-        self.tree_matches.pack(fill="both", expand=True)
+        self.canvas_middle = tk.Canvas(self.frame_middle, width=800, height=800)
+        self.scrollbar_middle = tk.Scrollbar(self.frame_middle, orient="vertical", command=self.canvas_middle.yview)
+        self.scrollable_frame_middle = tk.Frame(self.canvas_middle)
+
+        self.scrollable_frame_middle.bind(
+            "<Configure>",
+            lambda e: self.canvas_middle.configure(
+                scrollregion=self.canvas_middle.bbox("all")
+            )
+        )
+
+        self.canvas_middle.create_window((0, 0), window=self.scrollable_frame_middle, anchor="nw")
+        self.canvas_middle.configure(yscrollcommand=self.scrollbar_middle.set)
+
+        self.canvas_middle.pack(side="left", fill="both", expand=True)
+        self.scrollbar_middle.pack(side="right", fill="y")
 
         # Right Frame - Top Champions
         self.frame_right = tk.Frame(self, width=200, height=800)
@@ -187,6 +212,10 @@ class LeagueStatsApp(tk.Tk):
         self.tree_top_champions.heading("Games", text="Games")
         self.tree_top_champions.heading("Winrate", text="Winrate")
         self.tree_top_champions.heading("K/D/A", text="K/D/A")
+        self.tree_top_champions.column("Champion", width=80)
+        self.tree_top_champions.column("Games", width=50)
+        self.tree_top_champions.column("Winrate", width=70)
+        self.tree_top_champions.column("K/D/A", width=80)
         self.tree_top_champions.pack(fill="both", expand=True)
 
     def get_data(self):
@@ -196,7 +225,6 @@ class LeagueStatsApp(tk.Tk):
         try:
             # Get PUUID
             puuid = get_puuid(game_name, name_tag)
-            print(f"PUUID: {puuid}")  # Debugging print statement
 
             # Get summoner information
             summoner_info = get_summoner_info_by_puuid(puuid)
@@ -207,12 +235,12 @@ class LeagueStatsApp(tk.Tk):
             # Fetch and display player icon (assuming you have a method to fetch and display the icon)
             icon_url = f"http://ddragon.leagueoflegends.com/cdn/12.14.1/img/profileicon/{summoner_info['profile_icon_id']}.png"
             icon_response = requests.get(icon_url)
-            icon_image = tk.PhotoImage(data=icon_response.content)
+            icon_image = ImageTk.PhotoImage(Image.open(io.BytesIO(icon_response.content)).resize((64, 64), Image.Resampling.LANCZOS))
             self.lbl_profile_icon.config(image=icon_image)
             self.lbl_profile_icon.image = icon_image
 
             # Get match data
-            match_ids = get_matchids(puuid, amount_of_games=10)
+            match_ids = get_matchids(puuid, amount_of_games=20)
 
             match_data = []
             for match_id in match_ids:
@@ -228,27 +256,58 @@ class LeagueStatsApp(tk.Tk):
             messagebox.showerror("Error", str(e))
 
     def display_match_history(self, data):
-        for item in self.tree_matches.get_children():
-            self.tree_matches.delete(item)
+        for widget in self.scrollable_frame_middle.winfo_children():
+            widget.destroy()
 
+        headers = ["Champion", "K/D/A", "CS", "Items", "Teams"]
+        for col, header in enumerate(headers):
+            tk.Label(self.scrollable_frame_middle, text=header, font=("Helvetica", 10, "bold")).grid(row=0, column=col, padx=5, pady=5)
+
+        y_offset = 1
         for match in data:
             champion_icon = fetch_image(CHAMPION_DATA[match['championName']])
             kda = f"{match['kills']}/{match['deaths']}/{match['assists']}"
             cs = match['totalMinionsKilled'] + match['neutralMinionsKilled']
-            items = ", ".join([str(i) for i in match['items']])  # Simplified item representation
 
-            team1_icons = [fetch_image(CHAMPION_DATA[champ]) for champ in match['team1']]
-            team2_icons = [fetch_image(CHAMPION_DATA[champ]) for champ in match['team2']]
+            # Create labels and item icons for the match history
+            label_champion_icon = tk.Label(self.scrollable_frame_middle, image=champion_icon)
+            label_champion_icon.image = champion_icon
+            label_champion_icon.grid(row=y_offset, column=0, padx=5, pady=5)
 
-            self.tree_matches.insert("", "end", values=("", kda, cs, items, ""))
+            label_kda = tk.Label(self.scrollable_frame_middle, text=kda)
+            label_kda.grid(row=y_offset, column=1, padx=5, pady=5)
 
-            last_item = self.tree_matches.get_children()[-1]
-            self.tree_matches.item(last_item, image=champion_icon)
+            label_cs = tk.Label(self.scrollable_frame_middle, text=str(cs))
+            label_cs.grid(row=y_offset, column=2, padx=5, pady=5)
 
-            for idx, icon in enumerate(team1_icons):
-                self.tree_matches.insert("", "end", values=(""), image=icon)
-            for idx, icon in enumerate(team2_icons):
-                self.tree_matches.insert("", "end", values=(""), image=icon)
+            col = 3
+            for item_id in match['items']:
+                item_id_str = str(item_id)  # Ensure item_id is a string
+                if item_id_str in ITEM_DATA:
+                    item_icon = fetch_image(ITEM_DATA[item_id_str])
+                    label_item_icon = tk.Label(self.scrollable_frame_middle, image=item_icon)
+                    label_item_icon.image = item_icon
+                    label_item_icon.grid(row=y_offset, column=col, padx=2, pady=5)
+                col += 1
+
+            col = 9  # Adjust column index for team icons
+            for icon in match['team1']:
+                champ_icon = fetch_image(CHAMPION_DATA[icon])
+                label_icon = tk.Label(self.scrollable_frame_middle, image=champ_icon)
+                label_icon.image = champ_icon
+                label_icon.grid(row=y_offset, column=col, padx=2, pady=5)
+                col += 1
+
+            y_offset += 1
+            col = 9  # Adjust column index for team icons
+            for icon in match['team2']:
+                champ_icon = fetch_image(CHAMPION_DATA[icon])
+                label_icon = tk.Label(self.scrollable_frame_middle, image=champ_icon)
+                label_icon.image = champ_icon
+                label_icon.grid(row=y_offset, column=col, padx=2, pady=5)
+                col += 1
+
+            y_offset += 1
 
     def display_top_champions(self, data):
         for item in self.tree_top_champions.get_children():
