@@ -1,0 +1,131 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 20px;
+}
+
+.profile, .match-history, .top-champions {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 10px;
+    width: 30%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    margin-top: 0;
+}
+
+#profile-info img, .match img, .champion img {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    margin-right: 10px;
+}
+
+.match-headers {
+    display: flex;
+    padding: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+}
+
+.header-column {
+    text-align: center;
+}
+
+.champion-column {
+    width: 80px;
+}
+
+.kda-column {
+    width: 80px;
+}
+
+.cs-column {
+    width: 40px;
+}
+
+.items-column {
+    width: 120px;
+}
+
+.teams-column {
+    flex-grow: 1;
+}
+
+.match {
+    display: flex;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.column {
+    text-align: center;
+}
+
+.champion-column .champion-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+}
+
+.kda-column span, .cs-column span {
+    display: block;
+}
+
+.items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.items .item-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.items .item-icon.new-row {
+    margin-top: 5px;
+}
+
+.teams {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+}
+
+.teams .team1, .teams .team2 {
+    display: flex;
+    justify-content: space-between;
+}
+
+.teams .team-icon {
+    width: 32px;
+    height: 32px;
+}
+
+#top-champions-list .champion {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+#top-champions-list .champion img {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    margin-right: 10px;
+}
