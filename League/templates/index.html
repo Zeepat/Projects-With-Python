@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>League of Legends Stats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="profile">
+            <h2>Profile</h2>
+            <form id="summoner-form">
+                <label for="game_name">Game Name:</label>
+                <input type="text" id="game_name" name="game_name" required>
+                <label for="name_tag">Name Tag:</label>
+                <input type="text" id="name_tag" name="name_tag" required>
+                <button type="submit">Get Data</button>
+            </form>
+            <div id="profile-info">
+                <!-- Profile information will be inserted here -->
+            </div>
+        </div>
+        <div class="match-history">
+            <h2>Match History</h2>
+            <div class="match-headers">
+                <div class="header-column champion-column">Champion</div>
+                <div class="header-column kda-column">K/D/A</div>
+                <div class="header-column cs-column">CS</div>
+                <div class="header-column items-column">Items</div>
+                <div class="header-column teams-column">Teams</div>
+            </div>
+            <div id="match-history-list">
+                <!-- Match history will be inserted here -->
+            </div>
+        </div>
+        <div class="top-champions">
+            <h2>Top Champions</h2>
+            <div id="top-champions-list">
+                <!-- Top champions will be inserted here -->
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('summoner-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const gameName = document.getElementById('game_name').value;
+            const nameTag = document.getElementById('name_tag').value;
+            fetch('/get_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ game_name: gameName, name_tag: nameTag })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                displayProfileInfo(data.summoner_info);
+                displayMatchHistory(data.matches, data.champion_data, data.item_data);
+                displayTopChampions(data.matches);
+            });
+        });
+
+        function displayProfileInfo(info) {
+            const profileDiv = document.getElementById('profile-info');
+            profileDiv.innerHTML = `
+                <img src="http://ddragon.leagueoflegends.com/cdn/12.14.1/img/profileicon/${info.profile_icon_id}.png" alt="Profile Icon">
+                <p>Summoner Level: ${info.summoner_level}</p>
+                <p>Solo/Duo Rank: ${info.rank_solo}</p>
+                <p>Flex Rank: ${info.rank_flex}</p>
+            `;
+        }
+
+        function displayMatchHistory(matches, championData, itemData) {
+            const matchHistoryDiv = document.getElementById('match-history-list');
+            matchHistoryDiv.innerHTML = matches.map(match => `
+                <div class="match">
+                    <div class="column champion-column">
+                        <img src="${championData[match.championName]}" alt="${match.championName}" class="champion-icon">
+                    </div>
+                    <div class="column kda-column">
+                        <span>${match.kills}/${match.deaths}/${match.assists}</span>
+                    </div>
+                    <div class="column cs-column">
+                        <span>${match.totalMinionsKilled + match.neutralMinionsKilled}</span>
+                    </div>
+                    <div class="column items-column">
+                        <div class="items">
+                            ${match.items.map((item, i) => item ? `<img src="${itemData[item]}" alt="Item" class="item-icon ${i % 3 === 0 ? 'new-row' : ''}">` : '').join('')}
+                        </div>
+                    </div>
+                    <div class="column teams-column">
+                        <div class="teams">
+                            <div class="team1">
+                                ${match.team1.map(champ => `<img src="${championData[champ]}" alt="${champ}" class="team-icon">`).join('')}
+                            </div>
+                            <div class="team2">
+                                ${match.team2.map(champ => `<img src="${championData[champ]}" alt="${champ}" class="team-icon">`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayTopChampions(matches) {
+            const championStats = {};
+            matches.forEach(match => {
+                const champ = match.championName;
+                if (!championStats[champ]) {
+                    championStats[champ] = { games: 0, wins: 0, kills: 0, deaths: 0, assists: 0 };
+                }
+                championStats[champ].games += 1;
+                championStats[champ].kills += match.kills;
+                championStats[champ].deaths += match.deaths;
+                championStats[champ].assists += match.assists;
+                if (match.win) championStats[champ].wins += 1;
+            });
+            const topChampions = Object.entries(championStats).sort((a, b) => b[1].games - a[1].games).slice(0, 5);
+            const topChampionsDiv = document.getElementById('top-champions-list');
+            topChampionsDiv.innerHTML = topChampions.map(([champ, stats]) => `
+                <div class="champion">
+                    <img src="${championData[champ]}" alt="${champ}">
+                    <p>Games: ${stats.games}</p>
+                    <p>Winrate: ${(stats.wins / stats.games * 100).toFixed(2)}%</p>
+                    <p>KDA: ${(stats.kills / stats.games).toFixed(1)}/${(stats.deaths / stats.games).toFixed(1)}/${(stats.assists / stats.games).toFixed(1)}</p>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
