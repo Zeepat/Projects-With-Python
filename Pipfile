@@ -8,6 +8,7 @@ pandas = "*"
 requests = "*"
 ipykernel = "*"
 pillow = "*"
+flask = "*"
 
 [dev-packages]
 
