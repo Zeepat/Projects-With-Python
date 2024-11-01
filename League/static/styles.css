@@ -35,13 +35,12 @@ h2 {
 
 .match-headers {
     display: flex;
-    padding: 10px;
-    font-weight: bold;
     border-bottom: 1px solid #ddd;
 }
 
 .header-column {
     text-align: center;
+    padding: 10px;
 }
 
 .champion-column {
@@ -57,18 +56,17 @@ h2 {
 }
 
 .items-column {
-    width: 120px;
+    width: 160px;
 }
 
 .teams-column {
-    flex-grow: 1;
+    width: 200px;
 }
 
 .match {
     display: flex;
-    margin-bottom: 10px;
     border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    padding: 10px 0;
 }
 
 .column {
@@ -89,6 +87,7 @@ h2 {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
+    justify-content: center;
 }
 
 .items .item-icon {
@@ -102,14 +101,13 @@ h2 {
 
 .teams {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 5px;
-    justify-content: center;
 }
 
 .teams .team1, .teams .team2 {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
 }
 
 .teams .team-icon {
